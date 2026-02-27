@@ -1,14 +1,12 @@
 import type { PipelineContext } from "../pipeline.js";
-import { query } from "../db.js";
-import { GoogleGenAI } from "@google/genai";
+import { query, getClient } from "../db.js";
 
-let _ai: InstanceType<typeof GoogleGenAI> | null = null;
-function getAI() {
-    if (!_ai) _ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    return _ai;
-}
+/**
+ * Embed stage — uses PostgreSQL full-text search (tsvector) instead of Gemini embeddings.
+ * Zero API calls, zero tokens. Rows are chunked and stored as searchable text.
+ */
 
-const CHUNK_SIZE = 20; // rows per chunk
+const CHUNK_SIZE = 20;
 
 function chunkRows(rows: Record<string, any>[], size: number): { text: string; indices: number[] }[] {
     const chunks: { text: string; indices: number[] }[] = [];
@@ -17,7 +15,6 @@ function chunkRows(rows: Record<string, any>[], size: number): { text: string; i
         const slice = rows.slice(i, i + size);
         const indices = slice.map((_, j) => i + j);
 
-        // Convert rows to readable text representation
         const text = slice
             .map((row, j) => {
                 const entries = Object.entries(row)
@@ -35,40 +32,30 @@ function chunkRows(rows: Record<string, any>[], size: number): { text: string; i
 }
 
 export async function embedStage(ctx: PipelineContext): Promise<PipelineContext> {
-    // Clear old embeddings
-    await query("DELETE FROM dataset_embeddings");
+    // Clear old search data
+    await query("DELETE FROM dataset_chunks");
 
     const chunks = chunkRows(ctx.rows, CHUNK_SIZE);
-    console.log(`[Embed] Embedding ${chunks.length} chunks...`);
+    console.log(`[Index] Indexing ${chunks.length} chunks for full-text search...`);
 
-    // Process in batches of 5 to avoid rate limits
-    const BATCH_SIZE = 5;
-    for (let b = 0; b < chunks.length; b += BATCH_SIZE) {
-        const batch = chunks.slice(b, b + BATCH_SIZE);
+    const client = await getClient();
+    try {
+        await client.query("BEGIN");
 
-        const embedPromises = batch.map(async (chunk) => {
-            const result = await getAI().models.embedContent({
-                model: "gemini-embedding-001",
-                contents: chunk.text,
-                config: { taskType: "RETRIEVAL_DOCUMENT" },
-            });
-            return {
-                text: chunk.text,
-                indices: chunk.indices,
-                embedding: result.embeddings?.[0]?.values || [],
-            };
-        });
-
-        const results = await Promise.all(embedPromises);
-
-        for (const r of results) {
-            if (r.embedding.length > 0) {
-                await query(
-                    `INSERT INTO dataset_embeddings (chunk_text, row_indices, embedding) VALUES ($1, $2, $3)`,
-                    [r.text, r.indices, `[${r.embedding.join(",")}]`]
-                );
-            }
+        for (const chunk of chunks) {
+            await client.query(
+                `INSERT INTO dataset_chunks (chunk_text, row_indices, search_vector) 
+         VALUES ($1, $2, to_tsvector('english', $1))`,
+                [chunk.text, chunk.indices]
+            );
         }
+
+        await client.query("COMMIT");
+    } catch (err) {
+        await client.query("ROLLBACK");
+        throw err;
+    } finally {
+        client.release();
     }
 
     // Store metadata
@@ -86,6 +73,6 @@ export async function embedStage(ctx: PipelineContext): Promise<PipelineContext>
         ]
     );
 
-    console.log(`[Embed] Stored ${chunks.length} embeddings in pgvector`);
+    console.log(`[Index] Stored ${chunks.length} chunks with full-text search index (zero API tokens used)`);
     return ctx;
 }

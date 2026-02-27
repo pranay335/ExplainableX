@@ -37,18 +37,21 @@ export async function getClient() {
 }
 
 export async function initDB() {
-  // Enable pgvector extension
-  await query(`CREATE EXTENSION IF NOT EXISTS vector`);
-
-  // Create embeddings table if not exists
+  // Create full-text search chunks table (no pgvector needed!)
   await query(`
-    CREATE TABLE IF NOT EXISTS dataset_embeddings (
+    CREATE TABLE IF NOT EXISTS dataset_chunks (
       id SERIAL PRIMARY KEY,
       chunk_text TEXT NOT NULL,
       row_indices INTEGER[] NOT NULL,
-      embedding vector(768),
+      search_vector tsvector,
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
+  `);
+
+  // Create GIN index for fast full-text search
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_chunks_search 
+    ON dataset_chunks USING GIN (search_vector)
   `);
 
   // Create dataset metadata table
@@ -65,7 +68,7 @@ export async function initDB() {
     )
   `);
 
-  console.log("Database initialized with pgvector.");
+  console.log("Database initialized (full-text search, zero embedding tokens).");
 }
 
 export default getPool;

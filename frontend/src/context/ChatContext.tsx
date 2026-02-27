@@ -10,6 +10,7 @@ export interface Message {
   sql?: string;
   data?: any[];
   visualizationConfig?: any;
+  grounded?: boolean;
   timestamp: Date;
 }
 
@@ -34,12 +35,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       content: text,
       timestamp: new Date(),
     };
-    
+
     setMessages(prev => [...prev, userMsg]);
     setIsLoading(true);
 
     try {
-      // Prepare history for API
       const history = messages.map(m => ({
         role: m.role === 'user' ? 'user' : 'model',
         parts: [{ text: m.content }]
@@ -52,15 +52,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       });
 
       const aiData = response.data;
-      
-      let queryResults = [];
+
+      let queryResults: any[] = [];
       if (aiData.sql) {
         try {
-            const sqlRes = await axios.post('/api/query', { sql: aiData.sql });
-            queryResults = sqlRes.data.results;
+          const sqlRes = await axios.post('/api/query', { sql: aiData.sql });
+          queryResults = sqlRes.data.results;
         } catch (e) {
-            console.error("SQL Execution failed", e);
-            // We might want to add an error message from system here
+          console.error("SQL Execution failed", e);
         }
       }
 
@@ -72,6 +71,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         sql: aiData.sql,
         visualizationConfig: aiData.visualization,
         data: queryResults,
+        grounded: true,
         timestamp: new Date(),
       };
 

@@ -21,7 +21,7 @@ export function ChatInterface() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
-    
+
     const text = input;
     setInput('');
     await sendMessage(text);
@@ -45,11 +45,11 @@ export function ChatInterface() {
             <Sparkles className="h-12 w-12 mb-4 text-indigo-400" />
             <h3 className="text-lg font-medium text-slate-900 dark:text-white">AI Analyst Ready</h3>
             <p className="max-w-md mt-2 text-center">
-              Ask questions about your data in plain English. I can generate SQL, run queries, and create visualizations.
+              Ask questions about your data in plain English. Answers are strictly grounded in your uploaded dataset — no hallucinations.
             </p>
             <div className="grid grid-cols-2 gap-2 mt-8 w-full max-w-lg">
               {['Show me the top 5 rows', 'Count records by category', 'Visualize sales over time', 'What is the average price?'].map((suggestion) => (
-                <button 
+                <button
                   key={suggestion}
                   onClick={() => sendMessage(suggestion)}
                   className="p-3 text-sm text-left bg-slate-50 dark:bg-slate-900 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl transition-colors border border-slate-100 dark:border-slate-800"
@@ -88,7 +88,7 @@ export function ChatInterface() {
           </button>
         </form>
         <div className="text-center mt-2">
-            <span className="text-[10px] text-slate-400">AI can make mistakes. Double check important info.</span>
+          <span className="text-[10px] text-slate-400">Answers are grounded in your uploaded dataset.</span>
         </div>
       </div>
     </div>

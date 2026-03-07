@@ -30,15 +30,25 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
 
   // CORS Configuration
-  const allowedOrigins = process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+  const rawOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',')
     : ["http://localhost:5173", "http://localhost:3000"];
+
+  // Sanitize: trim whitespace and remove trailing slashes
+  const allowedOrigins = rawOrigins.map(o => o.trim().replace(/\/$/, ""));
 
   app.use((req, res, next) => {
     const origin = req.headers.origin;
-    if (origin && allowedOrigins.includes(origin)) {
-      res.header("Access-Control-Allow-Origin", origin);
-    } else if (!origin) {
+
+    if (origin) {
+      const sanitizedOrigin = origin.trim().replace(/\/$/, "");
+      if (allowedOrigins.includes(sanitizedOrigin) || allowedOrigins.includes("*")) {
+        res.header("Access-Control-Allow-Origin", origin);
+      } else {
+        console.warn(`CORS blocked request from origin: ${origin}`);
+        console.debug(`Allowed Origins are: ${JSON.stringify(allowedOrigins)}`);
+      }
+    } else {
       // Allow non-browser requests (like health checks or direct API calls)
       res.header("Access-Control-Allow-Origin", "*");
     }

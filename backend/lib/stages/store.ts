@@ -26,15 +26,28 @@ export async function storeStage(ctx: PipelineContext): Promise<PipelineContext>
     try {
         await client.query("BEGIN");
 
-        const placeholders = columns.map((_, i) => `$${i + 1}`).join(", ");
-        const insertSQL = `INSERT INTO "${tableName}" (${columns.map((c) => `"${c.safeName}"`).join(", ")}) VALUES (${placeholders})`;
+        const colsLength = columns.length;
+        // PostgreSQL limits parameters to ~65535, so keep batch sizes safe.
+        const rowsPerBatch = Math.max(1, Math.floor(60000 / colsLength));
 
-        for (const row of ctx.rows) {
-            const values = columns.map((c) => {
-                const val = row[c.originalName];
-                return val === undefined ? null : val;
-            });
-            await client.query(insertSQL, values);
+        for (let i = 0; i < ctx.rows.length; i += rowsPerBatch) {
+            const batchRows = ctx.rows.slice(i, i + rowsPerBatch);
+            const flatValues: any[] = [];
+            const valueStrings: string[] = [];
+
+            let paramIdx = 1;
+            for (const row of batchRows) {
+                const rowPlaceholders: string[] = [];
+                for (const c of columns) {
+                    const val = row[c.originalName];
+                    flatValues.push(val === undefined ? null : val);
+                    rowPlaceholders.push(`$${paramIdx++}`);
+                }
+                valueStrings.push(`(${rowPlaceholders.join(", ")})`);
+            }
+
+            const batchInsertSQL = `INSERT INTO "${tableName}" (${columns.map((c) => `"${c.safeName}"`).join(", ")}) VALUES ${valueStrings.join(", ")}`;
+            await client.query(batchInsertSQL, flatValues);
         }
 
         await client.query("COMMIT");

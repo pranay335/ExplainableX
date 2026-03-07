@@ -9,7 +9,6 @@ config({ path: path.resolve(__dirname, "../.env") });
 
 import express from "express";
 import multer from "multer";
-import { GoogleGenAI } from "@google/genai";
 import { initDB, query } from "./lib/db.js";
 import { runPipeline } from "./lib/pipeline.js";
 import { parseStage } from "./lib/stages/parse.js";
@@ -19,7 +18,6 @@ import { storeStage } from "./lib/stages/store.js";
 import { embedStage } from "./lib/stages/embed.js";
 import { ragChat } from "./lib/rag.js";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 
 async function startServer() {
@@ -83,6 +81,7 @@ async function startServer() {
   // ---- DATASET SCHEMA + STATS ----
   app.get("/api/data/schema", async (req, res) => {
     try {
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
       const meta = await query("SELECT * FROM dataset_metadata ORDER BY created_at DESC LIMIT 1");
       if (meta.rows.length === 0) {
         return res.json({ loaded: false });
@@ -106,6 +105,7 @@ async function startServer() {
   // ---- DATA PREVIEW ----
   app.get("/api/data/preview", async (req, res) => {
     try {
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
       const limit = parseInt(req.query.limit as string) || 100;
 
       // Check if table exists
@@ -167,14 +167,21 @@ async function startServer() {
   app.post("/api/report", async (req, res) => {
     try {
       const { conversation } = req.body;
-      const model = ai.models.getGenerativeModel({
-        model: "gemini-2.0-flash",
-        systemInstruction:
-          "You are a reporting assistant. Summarize the following data analysis conversation into a professional executive summary report in Markdown format. Highlight key insights found. Only include facts supported by the data discussed.",
+      const { OpenAI } = await import("openai");
+      const useHuggingFace = !!process.env.HUGGINGFACE_API_KEY;
+      const localAi = useHuggingFace
+        ? new OpenAI({ baseURL: "https://api-inference.huggingface.co/v1/", apiKey: process.env.HUGGINGFACE_API_KEY })
+        : new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+      const result = await localAi.chat.completions.create({
+        model: useHuggingFace ? "meta-llama/Meta-Llama-3-8B-Instruct" : "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "You are a reporting assistant. Summarize the following data analysis conversation into a professional executive summary report in Markdown format. Highlight key insights found. Only include facts supported by the data discussed." },
+          { role: "user", content: JSON.stringify(conversation) }
+        ]
       });
 
-      const result = await model.generateContent(JSON.stringify(conversation));
-      res.json({ report: result.response.text() });
+      res.json({ report: result.choices[0].message.content });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

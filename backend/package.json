@@ -8,10 +8,10 @@
         "start": "tsx server.ts"
     },
     "dependencies": {
-        "@google/genai": "^1.29.0",
         "dotenv": "^17.2.3",
         "express": "^4.21.2",
         "multer": "^2.1.0",
+        "openai": "^6.25.0",
         "papaparse": "^5.5.3",
         "pg": "^8.19.0"
     },

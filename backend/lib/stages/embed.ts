@@ -42,11 +42,23 @@ export async function embedStage(ctx: PipelineContext): Promise<PipelineContext>
     try {
         await client.query("BEGIN");
 
-        for (const chunk of chunks) {
+        // Batch chunks to reduce network round trips
+        for (let i = 0; i < chunks.length; i += 100) {
+            const batchChunks = chunks.slice(i, i + 100);
+            const flatValues: any[] = [];
+            const valueStrings: string[] = [];
+
+            let paramIdx = 1;
+            for (const chunk of batchChunks) {
+                flatValues.push(chunk.text);
+                flatValues.push(chunk.indices);
+                // The chunk_text is inserted as both text column and used for to_tsvector.
+                valueStrings.push(`($${paramIdx++}, $${paramIdx++}, to_tsvector('english', $${paramIdx - 2}))`);
+            }
+
             await client.query(
-                `INSERT INTO dataset_chunks (chunk_text, row_indices, search_vector) 
-         VALUES ($1, $2, to_tsvector('english', $1))`,
-                [chunk.text, chunk.indices]
+                `INSERT INTO dataset_chunks (chunk_text, row_indices, search_vector) VALUES ${valueStrings.join(", ")}`,
+                flatValues
             );
         }
 

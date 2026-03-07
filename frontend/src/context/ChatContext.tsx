@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import axios from 'axios';
 import { useData } from './DataContext';
 
@@ -26,7 +26,12 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 export function ChatProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { schema } = useData();
+  const { schema, fileName } = useData();
+
+  // Clear chat whenever a new file is uploaded
+  useEffect(() => {
+    setMessages([]);
+  }, [fileName]);
 
   const sendMessage = async (text: string) => {
     const userMsg: Message = {

@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '@/lib/api';
 import { Sidebar } from '@/components/Sidebar';
 import { Topbar } from '@/components/Topbar';
 import { FileUpload } from '@/components/FileUpload';
@@ -21,7 +21,7 @@ function Dashboard() {
     async function load() {
       await fetchSchema();
       try {
-        const res = await axios.get('/api/data/preview?limit=10');
+        const res = await api.get('/api/data/preview?limit=10');
         setPreview(res.data.rows || []);
       } catch { }
       setLoading(false);
@@ -172,8 +172,8 @@ function Dashboard() {
                   <td className="px-6 py-3 font-medium text-slate-900 dark:text-white">{col.originalName}</td>
                   <td className="px-6 py-3">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${col.sqlType === 'INTEGER' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
-                        col.sqlType === 'REAL' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' :
-                          'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                      col.sqlType === 'REAL' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' :
+                        'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                       }`}>
                       {col.sqlType}
                     </span>

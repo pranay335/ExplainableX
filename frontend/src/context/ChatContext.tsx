@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import axios from 'axios';
+import api from '@/lib/api';
 import { useData } from './DataContext';
 
 export interface Message {
@@ -50,7 +50,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         parts: [{ text: m.content }]
       }));
 
-      const response = await axios.post('/api/chat', {
+      const response = await api.post('/api/chat', {
         message: text,
         schema: schema,
         history: history
@@ -61,7 +61,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       let queryResults: any[] = [];
       if (aiData.sql) {
         try {
-          const sqlRes = await axios.post('/api/query', { sql: aiData.sql });
+          const sqlRes = await api.post('/api/query', { sql: aiData.sql });
           queryResults = sqlRes.data.results;
         } catch (e) {
           console.error("SQL Execution failed", e);

@@ -6,7 +6,10 @@
     "dev": "npm run dev:backend & npm run dev:frontend",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:backend": "cd backend && npm run dev",
-    "install:all": "npm install --prefix frontend && npm install --prefix backend",
-    "build": "cd frontend && npm run build"
+    "install:all": "npm install && npm install --prefix frontend && npm install --prefix backend",
+    "build:all": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "start:backend": "cd backend && npm run start"
   }
 }

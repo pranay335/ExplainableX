@@ -25,15 +25,26 @@ async function startServer() {
   await initDB();
 
   const app = express();
-  const PORT = 3000;
+  const PORT = process.env.PORT || 3000;
 
   app.use(express.json({ limit: "50mb" }));
 
-  // CORS for frontend dev server
+  // CORS Configuration
+  const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+    : ["http://localhost:5173", "http://localhost:3000"];
+
   app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "http://localhost:5173");
+    const origin = req.headers.origin;
+    if (origin && allowedOrigins.includes(origin)) {
+      res.header("Access-Control-Allow-Origin", origin);
+    } else if (!origin) {
+      // Allow non-browser requests (like health checks or direct API calls)
+      res.header("Access-Control-Allow-Origin", "*");
+    }
+
     res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-    res.header("Access-Control-Allow-Headers", "Content-Type");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
     if (req.method === "OPTIONS") return res.sendStatus(204);
     next();
   });
@@ -188,8 +199,9 @@ async function startServer() {
   });
 
   // ==================== START SERVER ====================
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Backend running on http://localhost:${PORT}`);
+  const serverPort = typeof PORT === 'string' ? parseInt(PORT, 10) : PORT;
+  app.listen(serverPort, "0.0.0.0", () => {
+    console.log(`Backend running on http://localhost:${serverPort}`);
   });
 }
 

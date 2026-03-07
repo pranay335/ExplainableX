@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useChat } from '@/context/ChatContext';
 import { useData } from '@/context/DataContext';
-import axios from 'axios';
+import api from '@/lib/api';
 import ReactMarkdown from 'react-markdown';
 import { Printer, FileText, Loader2, Database, Table, LayoutList, Heart, PieChart as PieChartIcon, AlertCircle, CheckCircle } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -16,7 +16,7 @@ export function ReportView() {
         if (messages.length === 0) return;
         setLoading(true);
         try {
-            const response = await axios.post('/api/report', { conversation: messages });
+            const response = await api.post('/api/report', { conversation: messages });
             setReport(response.data.report);
         } catch (e) {
             console.error(e);

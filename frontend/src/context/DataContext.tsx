@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import axios from 'axios';
+import api from '@/lib/api';
 
 export interface ColumnInfo {
   originalName: string;
@@ -38,7 +38,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await axios.post('/api/data/upload', formData, {
+    const response = await api.post('/api/data/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
 
@@ -54,7 +54,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const fetchSchema = async () => {
     try {
-      const response = await axios.get('/api/data/schema');
+      const response = await api.get('/api/data/schema');
       if (response.data.loaded) {
         setIsDataLoaded(true);
         setSchema(response.data.summaryText);

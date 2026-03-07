@@ -73,7 +73,13 @@ ${columns.map((c: any) => `- "${c.safeName}" (Type: ${c.sqlType})`).join("\n")}
 Rules:
 1. ALWAYS double-quote table and column names: "dataset", "ColumnName".
 2. Use ILIKE for text searches.
-3. Return ONLY a JSON object: { "sql": "...", "visualization": { "type": "bar"|"line"|"pie"|"area", "xAxis": "ColumnName", "yAxis": "ColumnName" } }`;
+3. MANDATORY VISUALIZATION: You MUST provide a "visualization" object for EVERY query that returns data.
+   - The "yAxis" MUST be a numeric column (e.g., counts, sums, prices, or numeric averages).
+   - NEVER use a string, date, or ID column for "yAxis".
+   - For trends/time-series: use "line" or "area".
+   - For comparisons/counts: use "bar" or "pie".
+   - For single numbers/results: use "bar", set "xAxis" to a descriptive static string alias (e.g., 'Total'), and set "yAxis" to the numeric result.
+4. Return ONLY a JSON object: { "sql": "...", "visualization": { "type": "bar"|"line"|"pie"|"area", "xAxis": "ColumnName", "yAxis": "ColumnName" } }`;
 
     const aiConfig1: any = {
         model: process.env.HUGGINGFACE_API_KEY ? "meta-llama/Meta-Llama-3-8B-Instruct" : "gpt-4o-mini",

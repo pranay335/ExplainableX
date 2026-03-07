@@ -6,7 +6,7 @@ function getAI() {
     if (!_ai) {
         if (process.env.HUGGINGFACE_API_KEY) {
             _ai = new OpenAI({
-                baseURL: "https://api-inference.huggingface.co/v1/",
+                baseURL: "https://router.huggingface.co/v1/",
                 apiKey: process.env.HUGGINGFACE_API_KEY
             });
         } else {
@@ -73,7 +73,7 @@ ${columns.map((c: any) => `- "${c.safeName}" (Type: ${c.sqlType})`).join("\n")}
 Rules:
 1. ALWAYS double-quote table and column names: "dataset", "ColumnName".
 2. Use ILIKE for text searches.
-3. Return ONLY a JSON object: { "sql": "...", "visualization": { "type": "bar"|... } }`;
+3. Return ONLY a JSON object: { "sql": "...", "visualization": { "type": "bar"|"line"|"pie"|"area", "xAxis": "ColumnName", "yAxis": "ColumnName" } }`;
 
     const aiConfig1: any = {
         model: process.env.HUGGINGFACE_API_KEY ? "meta-llama/Meta-Llama-3-8B-Instruct" : "gpt-4o-mini",
@@ -85,10 +85,46 @@ Rules:
     if (!process.env.HUGGINGFACE_API_KEY) aiConfig1.response_format = { type: "json_object" };
 
     const result1 = await getAI().chat.completions.create(aiConfig1);
-    let response1Text = result1.choices[0].message.content || "{}";
-    const jsonMatch1 = response1Text.match(/\{[\s\S]*\}/);
-    if (jsonMatch1) response1Text = jsonMatch1[0];
-    const step1 = JSON.parse(response1Text);
+    // Helper to extract FIRST valid JSON object (handles trailing text/multiple blocks)
+    function parseFirstJson(text: string) {
+        const firstOpen = text.indexOf('{');
+        if (firstOpen === -1) return null;
+
+        // Try greedy match first but trim if it fails
+        const match = text.match(/\{[\s\S]*\}/);
+        if (!match) return null;
+
+        let candidate = match[0];
+        try {
+            return JSON.parse(candidate);
+        } catch (e) {
+            // If failed, try walking back from the last '}' to find the matching one
+            // or just use a more restricted search if necessary.
+            // For now, let's try a simpler fix: pick the first { ... } pair that parses.
+            let stack = 0;
+            let end = -1;
+            for (let i = firstOpen; i < text.length; i++) {
+                if (text[i] === '{') stack++;
+                if (text[i] === '}') {
+                    stack--;
+                    if (stack === 0) {
+                        end = i;
+                        break;
+                    }
+                }
+            }
+            if (end !== -1) {
+                return JSON.parse(text.substring(firstOpen, end + 1));
+            }
+            throw e;
+        }
+    }
+
+    const response1Text = result1.choices[0].message.content || "{}";
+    const step1 = parseFirstJson(response1Text);
+    if (!step1) {
+        return { type: "text", text: "I'm sorry, I couldn't generate a valid query for that question." };
+    }
 
     if (!step1.sql) {
         return { type: "text", text: "I'm sorry, I couldn't generate a query for that question." };

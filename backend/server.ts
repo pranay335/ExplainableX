@@ -170,7 +170,7 @@ async function startServer() {
       const { OpenAI } = await import("openai");
       const useHuggingFace = !!process.env.HUGGINGFACE_API_KEY;
       const localAi = useHuggingFace
-        ? new OpenAI({ baseURL: "https://api-inference.huggingface.co/v1/", apiKey: process.env.HUGGINGFACE_API_KEY })
+        ? new OpenAI({ baseURL: "https://router.huggingface.co/v1/", apiKey: process.env.HUGGINGFACE_API_KEY })
         : new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
       const result = await localAi.chat.completions.create({

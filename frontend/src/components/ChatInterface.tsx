@@ -7,9 +7,49 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export function ChatInterface() {
   const { messages, sendMessage, isLoading } = useChat();
-  const { isDataLoaded } = useData();
+  const { isDataLoaded, columns } = useData();
   const [input, setInput] = React.useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const suggestions = React.useMemo(() => {
+    if (!columns || columns.length === 0) {
+      return [
+        { text: 'Show me the top 5 rows', icon: '📊' },
+        { text: 'Count records by category', icon: '🏷️' },
+        { text: 'Visualize trends over time', icon: '📈' },
+        { text: 'What is the average distribution?', icon: '⚖️' }
+      ];
+    }
+
+    const numericCols = columns.filter(c => c.sqlType === 'INTEGER' || c.sqlType === 'REAL');
+    const categoricalCols = columns.filter(c => c.sqlType === 'TEXT' && c.uniqueCount > 1 && c.uniqueCount < 50);
+
+    const dynamic: { text: string; icon: string }[] = [];
+
+    // 1. Basic Preview
+    dynamic.push({ text: 'Show me the first 5 rows of data', icon: '📋' });
+
+    // 2. Numeric Insight
+    if (numericCols.length > 0) {
+      const col = numericCols[0];
+      dynamic.push({ text: `What is the average ${col.originalName}?`, icon: '🧮' });
+    } else {
+      dynamic.push({ text: 'Summarize the numerical trends', icon: '📈' });
+    }
+
+    // 3. Categorical Insight
+    if (categoricalCols.length > 0) {
+      const col = categoricalCols[0];
+      dynamic.push({ text: `Group the data by ${col.originalName}`, icon: '🏷️' });
+    } else {
+      dynamic.push({ text: 'What are the main categories here?', icon: '🔍' });
+    }
+
+    // 4. General/AI
+    dynamic.push({ text: 'Give me a brief executive summary', icon: '✨' });
+
+    return dynamic;
+  }, [columns]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -63,12 +103,7 @@ export function ChatInterface() {
               Ask questions about your data in plain English. Results are strictly grounded in your dataset.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-10 w-full max-w-xl">
-              {[
-                { text: 'Show me the top 5 rows', icon: '📊' },
-                { text: 'Count records by category', icon: '🏷️' },
-                { text: 'Visualize trends over time', icon: '📈' },
-                { text: 'What is the average distribution?', icon: '⚖️' }
-              ].map((suggestion) => (
+              {suggestions.map((suggestion) => (
                 <button
                   key={suggestion.text}
                   onClick={() => sendMessage(suggestion.text)}

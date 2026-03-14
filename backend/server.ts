@@ -8,6 +8,7 @@ const __dirname = path.dirname(__filename);
 config({ path: path.resolve(__dirname, "../.env") });
 
 import express from "express";
+import cors from "cors";
 import multer from "multer";
 import { initDB, query } from "./lib/db.js";
 import { runPipeline } from "./lib/pipeline.js";
@@ -58,6 +59,11 @@ async function startServer() {
     if (req.method === "OPTIONS") return res.sendStatus(204);
     next();
   });
+
+  // Serve static files from the 'public' directory (frontend build)
+  const publicPath = path.join(__dirname, "public");
+  app.use(express.static(publicPath));
+
 
   // ==================== API ROUTES ====================
 
@@ -207,6 +213,14 @@ async function startServer() {
       res.status(500).json({ error: error.message });
     }
   });
+
+  // Catch-all route to serve index.html for client-side routing
+  app.get("*", (req, res) => {
+    if (!req.path.startsWith("/api")) {
+      res.sendFile(path.join(publicPath, "index.html"));
+    }
+  });
+
 
   // ==================== START SERVER ====================
   const serverPort = typeof PORT === 'string' ? parseInt(PORT, 10) : PORT;

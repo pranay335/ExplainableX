@@ -78,7 +78,7 @@ Rules:
 4. Return ONLY a JSON object: { "sql": "...", "visualization": { "type": "bar"|"line"|"pie"|"area", "xAxis": "ColumnName", "yAxis": "ColumnName" } }`;
 
     const aiConfig1: any = {
-        model: "llama3-70b-8192",
+        model: "llama-3.1-70b-versatile",
         messages: [
             { role: "system", content: systemInstruction1 },
             { role: "user", content: message }
@@ -151,7 +151,7 @@ SQL Used: ${step1.sql}
 Data Results: ${JSON.stringify(data.slice(0, 20))} ${data.length > 20 ? "(truncated)" : ""}`;
 
     const aiConfig2: any = {
-        model: "llama3-70b-8192",
+        model: "llama-3.1-70b-versatile",
         messages: [
             { role: "system", content: systemInstruction2 },
             { role: "user", content: userMessage2 }

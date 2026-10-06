@@ -201,7 +201,7 @@ async function startServer() {
       });
 
       const result = await localAi.chat.completions.create({
-        model: "llama3-70b-8192",
+        model: "llama-3.1-70b-versatile",
         messages: [
           { role: "system", content: "You are a reporting assistant. Summarize the following data analysis conversation into a professional executive summary report in Markdown format. Highlight key insights found. Only include facts supported by the data discussed." },
           { role: "user", content: JSON.stringify(conversation) }

@@ -195,13 +195,13 @@ async function startServer() {
     try {
       const { conversation } = req.body;
       const { OpenAI } = await import("openai");
-      const useHuggingFace = !!process.env.HUGGINGFACE_API_KEY;
-      const localAi = useHuggingFace
-        ? new OpenAI({ baseURL: "https://router.huggingface.co/v1/", apiKey: process.env.HUGGINGFACE_API_KEY })
-        : new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const localAi = new OpenAI({
+        baseURL: "https://api.groq.com/openai/v1",
+        apiKey: process.env.GROQ_API_KEY
+      });
 
       const result = await localAi.chat.completions.create({
-        model: useHuggingFace ? "meta-llama/Meta-Llama-3-8B-Instruct" : "gpt-4o-mini",
+        model: "llama3-70b-8192",
         messages: [
           { role: "system", content: "You are a reporting assistant. Summarize the following data analysis conversation into a professional executive summary report in Markdown format. Highlight key insights found. Only include facts supported by the data discussed." },
           { role: "user", content: JSON.stringify(conversation) }

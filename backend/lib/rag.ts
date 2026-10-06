@@ -4,14 +4,10 @@ import { query } from "./db.js";
 let _ai: OpenAI | null = null;
 function getAI() {
     if (!_ai) {
-        if (process.env.HUGGINGFACE_API_KEY) {
-            _ai = new OpenAI({
-                baseURL: "https://router.huggingface.co/v1/",
-                apiKey: process.env.HUGGINGFACE_API_KEY
-            });
-        } else {
-            _ai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-        }
+        _ai = new OpenAI({
+            baseURL: "https://api.groq.com/openai/v1",
+            apiKey: process.env.GROQ_API_KEY
+        });
     }
     return _ai;
 }
@@ -47,7 +43,7 @@ export async function ragChat(
         return await openAiChat(message, schemaText, columns, history);
     } catch (err: any) {
         console.error("AI Chat Error:", err);
-        const provider = process.env.HUGGINGFACE_API_KEY ? "Hugging Face" : "OpenAI";
+        const provider = "Groq";
         return {
             type: "text",
             text: `⚠️ **Service Unavailable:** The ${provider} service is currently unreachable or has exceeded its quota. Please check your API key or wait a few minutes before trying again.`
@@ -82,13 +78,13 @@ Rules:
 4. Return ONLY a JSON object: { "sql": "...", "visualization": { "type": "bar"|"line"|"pie"|"area", "xAxis": "ColumnName", "yAxis": "ColumnName" } }`;
 
     const aiConfig1: any = {
-        model: process.env.HUGGINGFACE_API_KEY ? "meta-llama/Meta-Llama-3-8B-Instruct" : "gpt-4o-mini",
+        model: "llama3-70b-8192",
         messages: [
             { role: "system", content: systemInstruction1 },
             { role: "user", content: message }
         ],
     };
-    if (!process.env.HUGGINGFACE_API_KEY) aiConfig1.response_format = { type: "json_object" };
+    aiConfig1.response_format = { type: "json_object" };
 
     const result1 = await getAI().chat.completions.create(aiConfig1);
     // Helper to extract FIRST valid JSON object (handles trailing text/multiple blocks)
@@ -155,7 +151,7 @@ SQL Used: ${step1.sql}
 Data Results: ${JSON.stringify(data.slice(0, 20))} ${data.length > 20 ? "(truncated)" : ""}`;
 
     const aiConfig2: any = {
-        model: process.env.HUGGINGFACE_API_KEY ? "meta-llama/Meta-Llama-3-8B-Instruct" : "gpt-4o-mini",
+        model: "llama3-70b-8192",
         messages: [
             { role: "system", content: systemInstruction2 },
             { role: "user", content: userMessage2 }
